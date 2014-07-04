@@ -37,6 +37,29 @@ static JSClass global_class =
 	JS_FinalizeStub, JSCLASS_NO_OPTIONAL_MEMBERS
 };
 
+static JSBool _egueb_js_sm_scripter_alert(JSContext *cx, uintN argc, jsval *vp)
+{
+	JSString* u16_txt;
+	unsigned int length;
+	char *txt;
+
+	if (!JS_ConvertArguments(cx, argc, JS_ARGV(cx, vp), "S", &u16_txt))
+		return JS_FALSE;
+
+	length = JS_GetStringEncodingLength(cx, u16_txt);
+	txt = alloca(sizeof(char) * (length + 1));
+	JS_EncodeStringToBuffer(u16_txt, txt, length);
+
+	printf("%.*s\n", length, txt);
+	return JS_TRUE;
+}
+
+static JSFunctionSpec global_functions[] =
+{
+    JS_FS("alert", _egueb_js_sm_scripter_alert, 1, 0),
+    JS_FS_END
+};
+
 /* The error reporter callback. */
 static void _egueb_js_sm_scripter_report_error(JSContext *cx,
 		const char *message, JSErrorReport *report)
@@ -51,6 +74,7 @@ static void _egueb_js_sm_scripter_report_error(JSContext *cx,
 			report->filename ? report->filename : "<no filename>",
 			(unsigned int) report->lineno, message);
 }
+
 /*----------------------------------------------------------------------------*
  *                           Scripter descriptor                              *
  *----------------------------------------------------------------------------*/
@@ -65,29 +89,17 @@ static void * _egueb_js_sm_scripter_new(void)
 
 	/* Create an execution context */
 	thiz->cx = JS_NewContext(thiz->rt, 8192);
+	JS_SetOptions(thiz->cx, JS_GetOptions(thiz->cx) | JSOPTION_VAROBJFIX);
 	JS_SetErrorReporter(thiz->cx, _egueb_js_sm_scripter_report_error);
 
-#if 0
 	/* Create a global object and a set of standard objects */
-	global = JS_NewCompartmentAndGlobalObject(thiz->cx, &global_class, NULL);
-	if (!global)
-	{
-		return -3;
-	}
-
-	if (!JS_DefineFunctions(cx, global, global_functions))
-	{
-	        return -4;
-	}
-
+	thiz->global = JS_NewCompartmentAndGlobalObject(thiz->cx, &global_class, NULL);
+	/* TODO add the blobal dom functions: alert... */
+	JS_DefineFunctions(thiz->cx, thiz->global, global_functions);
 	/* Populate the global object with the standard globals,
 	 * like Object and Array.
 	 */
-	if (!JS_InitStandardClasses(cx, global))
-	{
-		return -5;
-	}
-#endif
+	JS_InitStandardClasses(thiz->cx, thiz->global);
 	return thiz;
 }
 
@@ -100,36 +112,43 @@ static void _egueb_js_sm_scripter_free(void *prv)
 	free(thiz);
 }
 
-static Eina_Bool _egueb_js_sm_scripter_load(void *prv, Egueb_Dom_String *s)
+static Eina_Bool _egueb_js_sm_scripter_global_add(void *prv, Egueb_Dom_String *name, void *obj, const char *type)
 {
 #if 0
 	JS_DefineObject(cx, global, "ender", ender_js_sm_class_get(), NULL, JSPROP_PERMANENT | JSPROP_READONLY);
-
-	/* Load the file */
-	JS_EvaluateScript(cx, global, data, data_len, argv[1], 0, &rval);
-	// compile:
-	//script = JS_CompileScript(cx, JS_GetGlobalObject(cx), TESTSCRIPT, strlen(TESTSCRIPT), "TEST", 0);
-	//JS_ExecuteScript(cx, JS_GetGlobalObject(cx), script, &rval);
 #endif
-
 }
 
-static Eina_Bool _egueb_js_sm_scripter_run(void *prv)
+static Eina_Bool _egueb_js_sm_scripter_load(void *prv, Egueb_Dom_String *s, void **obj)
 {
+	Egueb_Js_Sm_Scripter *thiz = prv;
+	JSObject *script;
+	const char *data;
 
+	data = egueb_dom_string_string_get(s);
+	script = JS_CompileScript(thiz->cx, NULL, data, strlen(data), NULL, 1);
+	*obj = script;
+	return script ? EINA_TRUE : EINA_FALSE;
 }
 
-static Eina_Bool _egueb_js_sm_scripter_call(void *prv, Egueb_Dom_String *s)
+static Eina_Bool _egueb_js_sm_scripter_run(void *prv, void *obj, Egueb_Dom_Node *ctx)
 {
+	Egueb_Js_Sm_Scripter *thiz = prv;
+	JSObject *script = obj;
+	jsval rval;
+	JSBool ret;
 
+	/* get the circle_click */
+	ret = JS_ExecuteScript(thiz->cx, thiz->global, script, &rval);
+	return ret;
 }
 
 static Egueb_Dom_Scripter_Descriptor _descriptor = {
-	/* .new 	 = */ _egueb_js_sm_scripter_new,
-	/* .free 	 = */ _egueb_js_sm_scripter_free,
-	/* .load 	 = */ _egueb_js_sm_scripter_load,
-	/* .run 	 = */ _egueb_js_sm_scripter_run,
-	/* .call 	 = */ _egueb_js_sm_scripter_call,
+	/* .new 	= */ _egueb_js_sm_scripter_new,
+	/* .free 	= */ _egueb_js_sm_scripter_free,
+	/* .load 	= */ _egueb_js_sm_scripter_load,
+	/* .run 	= */ _egueb_js_sm_scripter_run,
+	/* .global_add 	= */ _egueb_js_sm_scripter_global_add,
 };
 /*============================================================================*
  *                                 Global                                     *
@@ -151,7 +170,7 @@ EAPI void egueb_js_sm_shutdown(void)
 	if (_init == 1)
 	{
 		ender_js_sm_shutdown();
-		egueb_shutdown();
+		egueb_dom_shutdown();
 	}
 	_init--;
 }

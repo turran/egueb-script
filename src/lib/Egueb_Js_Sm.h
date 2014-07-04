@@ -48,6 +48,7 @@
 
 #include <Egueb_Dom.h>
 
+EAPI Egueb_Dom_Scripter * egueb_js_sm_scripter_new(void);
 EAPI void egueb_js_sm_init(void);
 EAPI void egueb_js_sm_shutdown(void);
 
