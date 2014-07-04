@@ -11,5 +11,5 @@ Description: JavaScript scripter for Egueb (SpiderMonkey based)
 Requires.private: @egueb_js_sm_requirements_private@
 Requires: @egueb_js_sm_requirements@
 Version: @VERSION@
-Libs: -L${libdir} -legueb-js-sm
+Libs: -L${libdir} -legueb_js_sm
 Cflags: -I${pkgincludedir}
