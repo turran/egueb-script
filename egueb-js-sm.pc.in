@@ -4,7 +4,7 @@ libdir=@libdir@
 includedir=@includedir@
 datarootdir=@datarootdir@
 datadir=@datadir@/@PACKAGE@
-pkgincludedir=@pkgincludedir@-@VMAJ@/svg
+pkgincludedir=@pkgincludedir@-@VMAJ@
 
 Name: Egueb JS SM
 Description: JavaScript scripter for Egueb (SpiderMonkey based)
