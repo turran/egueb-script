@@ -22,5 +22,6 @@
 #include <jsapi.h>
 #include <Ender.h>
 #include <Egueb_Dom.h>
+#include <Ender_Js_Sm.h>
 
 #endif

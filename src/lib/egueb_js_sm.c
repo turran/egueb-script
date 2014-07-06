@@ -26,6 +26,12 @@ typedef struct _Egueb_Js_Sm_Scripter
 	JSObject *global;
 } Egueb_Js_Sm_Scripter;
 
+typedef struct _Egueb_Js_Sm_Scripter_Script
+{
+	JSObject *obj;
+	JSObject *ctx;
+} Egueb_Js_Sm_Scripter_Script;
+
 static int _init = 0;
 
 /* The class of the global object. */
@@ -56,20 +62,14 @@ static JSBool _egueb_js_sm_scripter_alert(JSContext *cx, uintN argc, jsval *vp)
 
 static JSFunctionSpec global_functions[] =
 {
-    JS_FS("alert", _egueb_js_sm_scripter_alert, 1, 0),
-    JS_FS_END
+	JS_FS("alert", _egueb_js_sm_scripter_alert, 1, 0),
+	JS_FS_END
 };
 
 /* The error reporter callback. */
 static void _egueb_js_sm_scripter_report_error(JSContext *cx,
 		const char *message, JSErrorReport *report)
 {
-	Egueb_Js_Sm_Scripter *thiz;
-	JSRuntime *rt;
-
-	rt = JS_GetRuntime(cx);
-	thiz = JS_GetRuntimePrivate(rt);
-	
 	fprintf(stderr, "%s:%u:%s\n",
 			report->filename ? report->filename : "<no filename>",
 			(unsigned int) report->lineno, message);
@@ -94,7 +94,7 @@ static void * _egueb_js_sm_scripter_new(void)
 
 	/* Create a global object and a set of standard objects */
 	thiz->global = JS_NewCompartmentAndGlobalObject(thiz->cx, &global_class, NULL);
-	/* TODO add the blobal dom functions: alert... */
+	/* TODO add the global dom functions: alert... */
 	JS_DefineFunctions(thiz->cx, thiz->global, global_functions);
 	/* Populate the global object with the standard globals,
 	 * like Object and Array.
@@ -112,43 +112,96 @@ static void _egueb_js_sm_scripter_free(void *prv)
 	free(thiz);
 }
 
-static Eina_Bool _egueb_js_sm_scripter_global_add(void *prv, Egueb_Dom_String *name, void *obj, const char *type)
+static void _egueb_js_sm_scripter_global_add(void *prv, const char *name, void *obj, const char *type)
 {
 #if 0
 	JS_DefineObject(cx, global, "ender", ender_js_sm_class_get(), NULL, JSPROP_PERMANENT | JSPROP_READONLY);
 #endif
 }
 
+static void _egueb_js_sm_scripter_global_clear(void *prv)
+{
+
+}
+
 static Eina_Bool _egueb_js_sm_scripter_load(void *prv, Egueb_Dom_String *s, void **obj)
 {
 	Egueb_Js_Sm_Scripter *thiz = prv;
-	JSObject *script;
+	JSObject *so;
+	Eina_Bool ret = EINA_FALSE;
 	const char *data;
 
+	*obj = NULL;
 	data = egueb_dom_string_string_get(s);
-	script = JS_CompileScript(thiz->cx, NULL, data, strlen(data), NULL, 1);
-	*obj = script;
-	return script ? EINA_TRUE : EINA_FALSE;
+	so = JS_CompileScript(thiz->cx, NULL, data, strlen(data), NULL, 1);
+	if (so)
+	{
+		Egueb_Js_Sm_Scripter_Script *script;
+		script = calloc(1, sizeof(Egueb_Js_Sm_Scripter_Script));
+		script->obj = so;
+		*obj = script;
+		ret = EINA_TRUE;
+	}
+	return ret;
 }
 
-static Eina_Bool _egueb_js_sm_scripter_run(void *prv, void *obj, Egueb_Dom_Node *ctx)
+static Eina_Bool _egueb_js_sm_scripter_script_run(void *prv, void *s)
 {
 	Egueb_Js_Sm_Scripter *thiz = prv;
-	JSObject *script = obj;
+	Egueb_Js_Sm_Scripter_Script *script = s;
 	jsval rval;
 	JSBool ret;
 
 	/* get the circle_click */
-	ret = JS_ExecuteScript(thiz->cx, thiz->global, script, &rval);
+	ret = JS_ExecuteScript(thiz->cx, thiz->global, script->obj, &rval);
 	return ret;
 }
 
+static Eina_Bool _egueb_js_sm_scripter_script_run_listener(void *prv, void *s, Egueb_Dom_Event *ev)
+{
+	Egueb_Js_Sm_Scripter *thiz = prv;
+	Egueb_Js_Sm_Scripter_Script *script = s;
+	JSObject *evt;
+	jsval rval;
+	JSBool ret;
+	const Ender_Lib *lib;
+	Ender_Item *i;
+
+	/* create 'this' in case it does not exist yet */
+	/* set 'evt' as part of global */
+	lib = ender_lib_find("egueb_dom");
+	i = ender_lib_item_find(lib, "egueb.dom.event");
+	evt = ender_js_sm_instance_new(thiz->cx, i, egueb_dom_event_ref(ev));
+	ender_item_unref(i);
+
+	JS_DefineProperty(thiz->cx, thiz->global, "evt",
+			OBJECT_TO_JSVAL(evt), NULL, NULL,
+			JSPROP_READONLY);
+
+	ret = JS_ExecuteScript(thiz->cx, thiz->global, script->obj, &rval);
+	/* remove the evt */
+
+	return ret;
+}
+
+static void _egueb_js_sm_scripter_script_free(void *prv, void *s)
+{
+	Egueb_Js_Sm_Scripter_Script *script = s;
+
+	script->obj = NULL;
+	script->ctx = NULL;
+	free(script);
+}
+
 static Egueb_Dom_Scripter_Descriptor _descriptor = {
-	/* .new 	= */ _egueb_js_sm_scripter_new,
-	/* .free 	= */ _egueb_js_sm_scripter_free,
-	/* .load 	= */ _egueb_js_sm_scripter_load,
-	/* .run 	= */ _egueb_js_sm_scripter_run,
-	/* .global_add 	= */ _egueb_js_sm_scripter_global_add,
+	/* .new 		= */ _egueb_js_sm_scripter_new,
+	/* .free 		= */ _egueb_js_sm_scripter_free,
+	/* .load 		= */ _egueb_js_sm_scripter_load,
+	/* .global_add 		= */ _egueb_js_sm_scripter_global_add,
+	/* .global_clear 	= */ _egueb_js_sm_scripter_global_clear,
+	/* .script_free 	= */ _egueb_js_sm_scripter_script_free,
+	/* .script_run 		= */ _egueb_js_sm_scripter_script_run,
+	/* .script_run_listener = */ _egueb_js_sm_scripter_script_run_listener,
 };
 /*============================================================================*
  *                                 Global                                     *
