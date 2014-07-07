@@ -164,13 +164,11 @@ static Eina_Bool _egueb_js_sm_scripter_script_run_listener(void *prv, void *s, E
 	JSObject *evt;
 	jsval rval;
 	JSBool ret;
-	const Ender_Lib *lib;
 	Ender_Item *i;
 
-	/* create 'this' in case it does not exist yet */
+	/* TODO create 'this' in case it does not exist yet */
 	/* set 'evt' as part of global */
-	lib = ender_lib_find("egueb_dom");
-	i = ender_lib_item_find(lib, "egueb.dom.event");
+	i = egueb_dom_event_item_get(ev);
 	evt = ender_js_sm_instance_new(thiz->cx, i, egueb_dom_event_ref(ev));
 	ender_item_unref(i);
 
