@@ -112,11 +112,14 @@ static void _egueb_js_sm_scripter_free(void *prv)
 	free(thiz);
 }
 
-static void _egueb_js_sm_scripter_global_add(void *prv, const char *name, void *obj, const char *type)
+static void _egueb_js_sm_scripter_global_add(void *prv, const char *name, void *obj, Ender_Item *i)
 {
-#if 0
-	JS_DefineObject(cx, global, "ender", ender_js_sm_class_get(), NULL, JSPROP_PERMANENT | JSPROP_READONLY);
-#endif
+	Egueb_Js_Sm_Scripter *thiz = prv;
+	JSObject *jsobj;
+
+	jsobj = ender_js_sm_instance_new(thiz->cx, i, obj);
+	JS_DefineProperty(thiz->cx, thiz->global, name, OBJECT_TO_JSVAL(jsobj),
+			NULL, NULL, JSPROP_READONLY);
 }
 
 static void _egueb_js_sm_scripter_global_clear(void *prv)
@@ -170,7 +173,6 @@ static Eina_Bool _egueb_js_sm_scripter_script_run_listener(void *prv, void *s, E
 	/* set 'evt' as part of global */
 	i = egueb_dom_event_item_get(ev);
 	evt = ender_js_sm_instance_new(thiz->cx, i, egueb_dom_event_ref(ev));
-	ender_item_unref(i);
 
 	JS_DefineProperty(thiz->cx, thiz->global, "evt",
 			OBJECT_TO_JSVAL(evt), NULL, NULL,
