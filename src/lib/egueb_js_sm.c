@@ -130,13 +130,29 @@ static void _egueb_js_sm_scripter_global_clear(void *prv)
 static Eina_Bool _egueb_js_sm_scripter_load(void *prv, Egueb_Dom_String *s, void **obj)
 {
 	Egueb_Js_Sm_Scripter *thiz = prv;
+	Egueb_Dom_String *uri = NULL;
+	jsval val;
 	JSObject *so;
 	Eina_Bool ret = EINA_FALSE;
 	const char *data;
 
 	*obj = NULL;
 	data = egueb_dom_string_string_get(s);
-	so = JS_CompileScript(thiz->cx, NULL, data, strlen(data), NULL, 1);
+	/* get the document, get the uri of the document, pass it as the filename */
+	if (JS_GetProperty(thiz->cx, thiz->global, "document", &val))
+	{
+		JSObject *doc;
+
+		doc = JSVAL_TO_OBJECT(val);
+		if (ender_js_sm_is_instance(thiz->cx, doc))
+		{
+			Egueb_Dom_Node *n;
+			n = ender_js_sm_instance_ptr_get(thiz->cx, doc);
+			uri = egueb_dom_document_uri_get(n);
+		}
+	}
+	so = JS_CompileScript(thiz->cx, NULL, data, strlen(data),
+			uri ? egueb_dom_string_string_get(uri) : NULL, 1);
 	if (so)
 	{
 		Egueb_Js_Sm_Scripter_Script *script;
@@ -145,6 +161,11 @@ static Eina_Bool _egueb_js_sm_scripter_load(void *prv, Egueb_Dom_String *s, void
 		*obj = script;
 		ret = EINA_TRUE;
 	}
+	if (uri)
+	{
+		egueb_dom_string_unref(uri);
+	}
+
 	return ret;
 }
 
