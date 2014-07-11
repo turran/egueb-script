@@ -75,6 +75,18 @@ static void _egueb_js_sm_scripter_report_error(JSContext *cx,
 			(unsigned int) report->lineno, message);
 }
 
+static void _egueb_js_sm_init_global_object(Egueb_Js_Sm_Scripter *thiz)
+{
+	/* Create a global object and a set of standard objects */
+	thiz->global = JS_NewCompartmentAndGlobalObject(thiz->cx, &global_class, NULL);
+	/* TODO add the global dom functions: alert... */
+	JS_DefineFunctions(thiz->cx, thiz->global, global_functions);
+	/* Populate the global object with the standard globals,
+	 * like Object and Array.
+	 */
+	JS_InitStandardClasses(thiz->cx, thiz->global);
+}
+
 /*----------------------------------------------------------------------------*
  *                           Scripter descriptor                              *
  *----------------------------------------------------------------------------*/
@@ -92,14 +104,7 @@ static void * _egueb_js_sm_scripter_new(void)
 	JS_SetOptions(thiz->cx, JS_GetOptions(thiz->cx) | JSOPTION_VAROBJFIX);
 	JS_SetErrorReporter(thiz->cx, _egueb_js_sm_scripter_report_error);
 
-	/* Create a global object and a set of standard objects */
-	thiz->global = JS_NewCompartmentAndGlobalObject(thiz->cx, &global_class, NULL);
-	/* TODO add the global dom functions: alert... */
-	JS_DefineFunctions(thiz->cx, thiz->global, global_functions);
-	/* Populate the global object with the standard globals,
-	 * like Object and Array.
-	 */
-	JS_InitStandardClasses(thiz->cx, thiz->global);
+	_egueb_js_sm_init_global_object(thiz);
 	return thiz;
 }
 
@@ -124,7 +129,9 @@ static void _egueb_js_sm_scripter_global_add(void *prv, const char *name, void *
 
 static void _egueb_js_sm_scripter_global_clear(void *prv)
 {
+	Egueb_Js_Sm_Scripter *thiz = prv;
 
+	_egueb_js_sm_init_global_object(thiz);
 }
 
 static Eina_Bool _egueb_js_sm_scripter_load(void *prv, Egueb_Dom_String *s, void **obj)
@@ -201,6 +208,7 @@ static Eina_Bool _egueb_js_sm_scripter_script_run_listener(void *prv, void *s, E
 
 	ret = JS_ExecuteScript(thiz->cx, thiz->global, script->obj, &rval);
 	/* remove the evt */
+	JS_DeleteProperty(thiz->cx, thiz->global, "evt");
 
 	return ret;
 }
