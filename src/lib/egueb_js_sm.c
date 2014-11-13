@@ -223,6 +223,7 @@ static void _egueb_js_sm_scripter_script_free(void *prv, void *s)
 }
 
 static Egueb_Dom_Scripter_Descriptor _descriptor = {
+	/* .version 		= */ EGUEB_DOM_SCRIPTER_DESCRIPTOR_VERSION,
 	/* .new 		= */ _egueb_js_sm_scripter_new,
 	/* .free 		= */ _egueb_js_sm_scripter_free,
 	/* .load 		= */ _egueb_js_sm_scripter_load,
