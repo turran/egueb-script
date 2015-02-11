@@ -1,4 +1,4 @@
-/* Egueb Js SM - JavaScript support for Egueb (SpiderMonkey based)
+/* Egueb Script - Scripting support for Egueb
  * Copyright (C) 2014 Jorge Luis Zapata
  *
  * This library is free software; you can redistribute it and/or
@@ -15,22 +15,25 @@
  * License along with this library.
  * If not, see <http://www.gnu.org/licenses/>.
  */
-#include "egueb_js_sm_private.h"
+#include "egueb_script_private.h"
+
+#include <jsapi.h>
+#include <Ender_Js_Sm.h>
 /*============================================================================*
  *                                  Local                                     *
  *============================================================================*/
-typedef struct _Egueb_Js_Sm_Scripter
+typedef struct _Egueb_Script_Js_Sm_Scripter
 {
 	JSRuntime *rt;
 	JSContext *cx;
 	JSObject *global;
-} Egueb_Js_Sm_Scripter;
+} Egueb_Script_Js_Sm_Scripter;
 
-typedef struct _Egueb_Js_Sm_Scripter_Script
+typedef struct _Egueb_Script_Js_Sm_Scripter_Script
 {
 	JSObject *obj;
 	JSObject *ctx;
-} Egueb_Js_Sm_Scripter_Script;
+} Egueb_Script_Js_Sm_Scripter_Script;
 
 static int _init = 0;
 
@@ -43,7 +46,7 @@ static JSClass global_class =
 	JS_FinalizeStub, JSCLASS_NO_OPTIONAL_MEMBERS
 };
 
-static JSBool _egueb_js_sm_scripter_alert(JSContext *cx, uintN argc, jsval *vp)
+static JSBool _egueb_script_js_sm_scripter_alert(JSContext *cx, uintN argc, jsval *vp)
 {
 	JSString* u16_txt;
 	unsigned int length;
@@ -62,12 +65,12 @@ static JSBool _egueb_js_sm_scripter_alert(JSContext *cx, uintN argc, jsval *vp)
 
 static JSFunctionSpec global_functions[] =
 {
-	JS_FS("alert", _egueb_js_sm_scripter_alert, 1, 0),
+	JS_FS("alert", _egueb_script_js_sm_scripter_alert, 1, 0),
 	JS_FS_END
 };
 
 /* The error reporter callback. */
-static void _egueb_js_sm_scripter_report_error(JSContext *cx,
+static void _egueb_script_js_sm_scripter_report_error(JSContext *cx,
 		const char *message, JSErrorReport *report)
 {
 	fprintf(stderr, "%s:%u:%s\n",
@@ -75,7 +78,7 @@ static void _egueb_js_sm_scripter_report_error(JSContext *cx,
 			(unsigned int) report->lineno, message);
 }
 
-static void _egueb_js_sm_init_global_object(Egueb_Js_Sm_Scripter *thiz)
+static void _egueb_script_js_sm_init_global_object(Egueb_Script_Js_Sm_Scripter *thiz)
 {
 	/* Create a global object and a set of standard objects */
 	thiz->global = JS_NewCompartmentAndGlobalObject(thiz->cx, &global_class, NULL);
@@ -90,11 +93,11 @@ static void _egueb_js_sm_init_global_object(Egueb_Js_Sm_Scripter *thiz)
 /*----------------------------------------------------------------------------*
  *                           Scripter descriptor                              *
  *----------------------------------------------------------------------------*/
-static void * _egueb_js_sm_scripter_new(void)
+static void * _egueb_script_js_sm_scripter_new(void)
 {
-	Egueb_Js_Sm_Scripter *thiz;
+	Egueb_Script_Js_Sm_Scripter *thiz;
 
-	thiz = calloc(1, sizeof(Egueb_Js_Sm_Scripter));
+	thiz = calloc(1, sizeof(Egueb_Script_Js_Sm_Scripter));
 	/* Create an instance of the engine */
 	thiz->rt = JS_NewRuntime(1024 * 1024);
 	JS_SetRuntimePrivate(thiz->rt, thiz);
@@ -102,24 +105,24 @@ static void * _egueb_js_sm_scripter_new(void)
 	/* Create an execution context */
 	thiz->cx = JS_NewContext(thiz->rt, 8192);
 	JS_SetOptions(thiz->cx, JS_GetOptions(thiz->cx) | JSOPTION_VAROBJFIX);
-	JS_SetErrorReporter(thiz->cx, _egueb_js_sm_scripter_report_error);
+	JS_SetErrorReporter(thiz->cx, _egueb_script_js_sm_scripter_report_error);
 
-	_egueb_js_sm_init_global_object(thiz);
+	_egueb_script_js_sm_init_global_object(thiz);
 	return thiz;
 }
 
-static void _egueb_js_sm_scripter_free(void *prv)
+static void _egueb_script_js_sm_scripter_free(void *prv)
 {
-	Egueb_Js_Sm_Scripter *thiz = prv;
+	Egueb_Script_Js_Sm_Scripter *thiz = prv;
 
 	JS_DestroyContext(thiz->cx);
 	JS_DestroyRuntime(thiz->rt);
 	free(thiz);
 }
 
-static void _egueb_js_sm_scripter_global_add(void *prv, const char *name, void *obj, Ender_Item *i)
+static void _egueb_script_js_sm_scripter_global_add(void *prv, const char *name, void *obj, Ender_Item *i)
 {
-	Egueb_Js_Sm_Scripter *thiz = prv;
+	Egueb_Script_Js_Sm_Scripter *thiz = prv;
 	JSObject *jsobj;
 
 	jsobj = ender_js_sm_instance_new(thiz->cx, i, obj);
@@ -127,16 +130,16 @@ static void _egueb_js_sm_scripter_global_add(void *prv, const char *name, void *
 			NULL, NULL, JSPROP_READONLY);
 }
 
-static void _egueb_js_sm_scripter_global_clear(void *prv)
+static void _egueb_script_js_sm_scripter_global_clear(void *prv)
 {
-	Egueb_Js_Sm_Scripter *thiz = prv;
+	Egueb_Script_Js_Sm_Scripter *thiz = prv;
 
-	_egueb_js_sm_init_global_object(thiz);
+	_egueb_script_js_sm_init_global_object(thiz);
 }
 
-static Eina_Bool _egueb_js_sm_scripter_load(void *prv, Egueb_Dom_String *s, void **obj)
+static Eina_Bool _egueb_script_js_sm_scripter_load(void *prv, Egueb_Dom_String *s, void **obj)
 {
-	Egueb_Js_Sm_Scripter *thiz = prv;
+	Egueb_Script_Js_Sm_Scripter *thiz = prv;
 	Egueb_Dom_String *uri = NULL;
 	jsval val;
 	JSObject *so;
@@ -162,8 +165,8 @@ static Eina_Bool _egueb_js_sm_scripter_load(void *prv, Egueb_Dom_String *s, void
 			uri ? egueb_dom_string_string_get(uri) : NULL, 1);
 	if (so)
 	{
-		Egueb_Js_Sm_Scripter_Script *script;
-		script = calloc(1, sizeof(Egueb_Js_Sm_Scripter_Script));
+		Egueb_Script_Js_Sm_Scripter_Script *script;
+		script = calloc(1, sizeof(Egueb_Script_Js_Sm_Scripter_Script));
 		script->obj = so;
 		*obj = script;
 		ret = EINA_TRUE;
@@ -176,10 +179,10 @@ static Eina_Bool _egueb_js_sm_scripter_load(void *prv, Egueb_Dom_String *s, void
 	return ret;
 }
 
-static Eina_Bool _egueb_js_sm_scripter_script_run(void *prv, void *s)
+static Eina_Bool _egueb_script_js_sm_scripter_script_run(void *prv, void *s)
 {
-	Egueb_Js_Sm_Scripter *thiz = prv;
-	Egueb_Js_Sm_Scripter_Script *script = s;
+	Egueb_Script_Js_Sm_Scripter *thiz = prv;
+	Egueb_Script_Js_Sm_Scripter_Script *script = s;
 	jsval rval;
 	JSBool ret;
 
@@ -188,10 +191,10 @@ static Eina_Bool _egueb_js_sm_scripter_script_run(void *prv, void *s)
 	return ret;
 }
 
-static Eina_Bool _egueb_js_sm_scripter_script_run_listener(void *prv, void *s, Egueb_Dom_Event *ev)
+static Eina_Bool _egueb_script_js_sm_scripter_script_run_listener(void *prv, void *s, Egueb_Dom_Event *ev)
 {
-	Egueb_Js_Sm_Scripter *thiz = prv;
-	Egueb_Js_Sm_Scripter_Script *script = s;
+	Egueb_Script_Js_Sm_Scripter *thiz = prv;
+	Egueb_Script_Js_Sm_Scripter_Script *script = s;
 	JSObject *evt;
 	jsval rval;
 	JSBool ret;
@@ -213,9 +216,9 @@ static Eina_Bool _egueb_js_sm_scripter_script_run_listener(void *prv, void *s, E
 	return ret;
 }
 
-static void _egueb_js_sm_scripter_script_free(void *prv, void *s)
+static void _egueb_script_js_sm_scripter_script_free(void *prv, void *s)
 {
-	Egueb_Js_Sm_Scripter_Script *script = s;
+	Egueb_Script_Js_Sm_Scripter_Script *script = s;
 
 	script->obj = NULL;
 	script->ctx = NULL;
@@ -224,14 +227,14 @@ static void _egueb_js_sm_scripter_script_free(void *prv, void *s)
 
 static Egueb_Dom_Scripter_Descriptor _descriptor = {
 	/* .version 		= */ EGUEB_DOM_SCRIPTER_DESCRIPTOR_VERSION,
-	/* .new 		= */ _egueb_js_sm_scripter_new,
-	/* .free 		= */ _egueb_js_sm_scripter_free,
-	/* .load 		= */ _egueb_js_sm_scripter_load,
-	/* .global_add 		= */ _egueb_js_sm_scripter_global_add,
-	/* .global_clear 	= */ _egueb_js_sm_scripter_global_clear,
-	/* .script_free 	= */ _egueb_js_sm_scripter_script_free,
-	/* .script_run 		= */ _egueb_js_sm_scripter_script_run,
-	/* .script_run_listener = */ _egueb_js_sm_scripter_script_run_listener,
+	/* .new 		= */ _egueb_script_js_sm_scripter_new,
+	/* .free 		= */ _egueb_script_js_sm_scripter_free,
+	/* .load 		= */ _egueb_script_js_sm_scripter_load,
+	/* .global_add 		= */ _egueb_script_js_sm_scripter_global_add,
+	/* .global_clear 	= */ _egueb_script_js_sm_scripter_global_clear,
+	/* .script_free 	= */ _egueb_script_js_sm_scripter_script_free,
+	/* .script_run 		= */ _egueb_script_js_sm_scripter_script_run,
+	/* .script_run_listener = */ _egueb_script_js_sm_scripter_script_run_listener,
 };
 /*============================================================================*
  *                                 Global                                     *
@@ -239,29 +242,17 @@ static Egueb_Dom_Scripter_Descriptor _descriptor = {
 /*============================================================================*
  *                                   API                                      *
  *============================================================================*/
-EAPI void egueb_js_sm_init(void)
+EAPI Egueb_Dom_Scripter * egueb_script_js_sm_scripter_new(void)
 {
-	if (!_init++)
-	{
-		egueb_dom_init();
-		ender_js_sm_init();
-	}
-}
-
-EAPI void egueb_js_sm_shutdown(void)
-{
-	if (_init == 1)
-	{
-		ender_js_sm_shutdown();
-		egueb_dom_shutdown();
-	}
-	_init--;
-}
-
-EAPI Egueb_Dom_Scripter * egueb_js_sm_scripter_new(void)
-{
+#if BUILD_JS_SM
 	Egueb_Dom_Scripter *ret;
+
+	if (!_init++)
+		ender_js_sm_init();
 
 	ret = egueb_dom_scripter_new(&_descriptor);
 	return ret;
+#else
+	return NULL;
+#endif
 }

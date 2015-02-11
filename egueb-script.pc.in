@@ -7,9 +7,9 @@ datadir=@datadir@/@PACKAGE@
 pkgincludedir=@pkgincludedir@-@VMAJ@
 
 Name: Egueb JS SM
-Description: JavaScript scripter for Egueb (SpiderMonkey based)
-Requires.private: @egueb_js_sm_requirements_private@
-Requires: @egueb_js_sm_requirements@
+Description: Scripting support for Egueb
+Requires.private: @egueb_script_requirements_private@
+Requires: @egueb_script_requirements@
 Version: @VERSION@
-Libs: -L${libdir} -legueb_js_sm
+Libs: -L${libdir} -legueb_script
 Cflags: -I${pkgincludedir}

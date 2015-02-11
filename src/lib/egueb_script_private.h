@@ -19,9 +19,11 @@
 #ifndef _EGUEB_JS_SM_PRIVATE_H
 #define _EGUEB_JS_SM_PRIVATE_H
 
-#include <jsapi.h>
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include <Ender.h>
 #include <Egueb_Dom.h>
-#include <Ender_Js_Sm.h>
 
 #endif

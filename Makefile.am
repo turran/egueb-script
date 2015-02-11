@@ -40,7 +40,7 @@ EXTRA_DIST += \
 AUTHORS \
 COPYING \
 README.md \
-egueb-js-sm.pc.in \
+egueb-script.pc.in \
 m4/efl_dlfcn.m4 \
 m4/ens_doxygen.m4
 
@@ -54,8 +54,8 @@ $(SED) \
 -e 's,@includedir\@,$(includedir),g' \
 -e 's,@pkgincludedir\@,$(pkgincludedir),g' \
 -e 's,@pkglibdir\@,$(pkglibdir),g' \
--e 's,@egueb_js_sm_requirements_private\@,$(egueb_js_sm_requirements_private),g' \
--e 's,@egueb_js_sm_requirements\@,$(egueb_js_sm_requirements),g' \
+-e 's,@egueb_script_requirements_private\@,$(egueb_script_requirements_private),g' \
+-e 's,@egueb_script_requirements\@,$(egueb_script_requirements),g' \
 < $< > $@ || rm $@
 
 pc_verbose = $(pc_verbose_@AM_V@)
@@ -69,6 +69,6 @@ pc_verbose_0 = @echo "  PC      " $@;
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA =
 
-pkgconfig_DATA += egueb-js-sm.pc
+pkgconfig_DATA += egueb-script.pc
 
 

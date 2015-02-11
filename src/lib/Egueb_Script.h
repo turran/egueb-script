@@ -16,15 +16,15 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _EGUEB_JS_SM_H_
-#define _EGUEB_JS_SM_H_
+#ifndef _EGUEB_SCRIPT_H_
+#define _EGUEB_SCRIPT_H_
 
 #ifdef EAPI
 # undef EAPI
 #endif
 
 #ifdef _WIN32
-# ifdef EGUEB_JS_SM_BUILD
+# ifdef EGUEB_SCRIPT_BUILD
 #  ifdef DLL_EXPORT
 #   define EAPI __declspec(dllexport)
 #  else
@@ -48,8 +48,10 @@
 
 #include <Egueb_Dom.h>
 
-EAPI Egueb_Dom_Scripter * egueb_js_sm_scripter_new(void);
-EAPI void egueb_js_sm_init(void);
-EAPI void egueb_js_sm_shutdown(void);
+EAPI void egueb_script_init(void);
+EAPI void egueb_script_shutdown(void);
+EAPI Egueb_Dom_Scripter * egueb_script_scripter_new(const char *mime);
+
+EAPI Egueb_Dom_Scripter * egueb_script_js_sm_scripter_new(void);
 
 #endif

@@ -10,7 +10,7 @@ m4_define([lt_cur], m4_eval(v_maj + v_min))
 m4_define([lt_rev], v_mic)
 m4_define([lt_age], v_min)
 
-AC_INIT([egueb_js_sm], [v_ver], [enesim-devel@googlegroups.com])
+AC_INIT([egueb_script], [v_ver], [enesim-devel@googlegroups.com])
 AC_PREREQ([2.60])
 AC_CONFIG_SRCDIR([configure.ac])
 AC_CONFIG_MACRO_DIR([m4])
@@ -69,19 +69,34 @@ ENS_CHECK_DOXYGEN([build_doc="yes"], [build_doc="no"])
 
 LT_SYS_MODULE_EXT
 
+### Core dependencies
+egueb_script_requirements="egueb-dom >= 0.0.23"
+egueb_script_requirements_private="ender >= 0.0.8"
+
 ### Checks for libraries
+### JavaScript SpiderMonkey backend
+js_sm_requirements="ender-js-sm >= 0.0.1 mozjs185"
+ENS_ENABLE_ARG([js_sm], [JavaScript SpiderMonkey support], [yes])
+PKG_CHECK_EXISTS([${js_sm_requirements}], [have_js_sm="yes"], [have_js_sm="no"])
 
-egueb_js_sm_requirements="${egueb_js_sm_requirements} egueb-dom >= 0.0.23"
-egueb_js_sm_requirements_private="${egueb_js_sm_requirements_private} ender-js-sm >= 0.0.1 ender >= 0.0.8 mozjs185"
+build_js_sm="no"
+if test "x${have_js_sm}" = "xyes" -a "x${want_js_sm}" = "xyes"; then
+  build_js_sm="yes"
+  egueb_script_requirements_private="${egueb_script_requirements_private} ${js_sm_requirements}"
+  AC_DEFINE([BUILD_JS_SM], [1], [Have support for Js SM])
+fi
+AM_CONDITIONAL([BUILD_JS_SM], [test "x${build_js_sm}" = "xyes"])
 
-PKG_CHECK_MODULES([REQUIREMENTS], [${egueb_js_sm_requirements} ${egueb_js_sm_requirements_private}])
-AC_SUBST([egueb_js_sm_requirements])
-AC_SUBST([egueb_js_sm_requirements_private])
 
-EGUEB_JS_SM_CFLAGS="${EGUEB_JS_SM_CFLAGS} ${REQUIREMENTS_CFLAGS}"
-EGUEB_JS_SM_LIBS="${REQUIREMENTS_LIBS}"
-AC_SUBST(EGUEB_JS_SM_CFLAGS)
-AC_SUBST(EGUEB_JS_SM_LIBS)
+
+PKG_CHECK_MODULES([REQUIREMENTS], [${egueb_script_requirements} ${egueb_script_requirements_private}])
+AC_SUBST([egueb_script_requirements])
+AC_SUBST([egueb_script_requirements_private])
+
+EGUEB_SCRIPT_CFLAGS="${EGUEB_SCRIPT_CFLAGS} ${REQUIREMENTS_CFLAGS}"
+EGUEB_SCRIPT_LIBS="${REQUIREMENTS_LIBS}"
+AC_SUBST(EGUEB_SCRIPT_CFLAGS)
+AC_SUBST(EGUEB_SCRIPT_LIBS)
 
 ## Make the debug preprocessor configurable
 
@@ -104,10 +119,13 @@ echo
 echo
 echo "Configuration Options Summary:"
 echo
-echo "Compilation............: make (or gmake)"
-echo "  CPPFLAGS.............: $CPPFLAGS"
-echo "  CFLAGS...............: $CFLAGS"
-echo "  LDFLAGS..............: $LDFLAGS"
+echo "Compilation.................: make (or gmake)"
+echo "  CPPFLAGS..................: $CPPFLAGS"
+echo "  CFLAGS....................: $CFLAGS"
+echo "  LDFLAGS...................: $LDFLAGS"
+echo
+echo "Backends:"
+echo "  JavaScript SpiderMonkey...: ${build_js_sm}"
 echo
 echo "Installation...........: make install (as root if needed, with 'su' or 'sudo')"
 echo "  prefix...............: $prefix"
