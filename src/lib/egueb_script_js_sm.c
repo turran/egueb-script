@@ -147,7 +147,7 @@ static Eina_Bool _egueb_script_js_sm_scripter_load(void *prv, Egueb_Dom_String *
 	const char *data;
 
 	*obj = NULL;
-	data = egueb_dom_string_string_get(s);
+	data = egueb_dom_string_chars_get(s);
 	/* get the document, get the uri of the document, pass it as the filename */
 	if (JS_GetProperty(thiz->cx, thiz->global, "document", &val))
 	{
@@ -162,7 +162,7 @@ static Eina_Bool _egueb_script_js_sm_scripter_load(void *prv, Egueb_Dom_String *
 		}
 	}
 	so = JS_CompileScript(thiz->cx, NULL, data, strlen(data),
-			uri ? egueb_dom_string_string_get(uri) : NULL, 1);
+			uri ? egueb_dom_string_chars_get(uri) : NULL, 1);
 	if (so)
 	{
 		Egueb_Script_Js_Sm_Scripter_Script *script;
